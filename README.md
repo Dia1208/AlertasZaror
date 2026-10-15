@@ -3,7 +3,8 @@
 Evaluación Parcial 2 · DSY1105 Desarrollo de Aplicaciones Móviles · Duoc UC
 Caso: Junta de Vecinos Población Zaror (Cerrillos)
 
-**Integrantes:** 
+**Integrantes:** Diego Alejandro González Ballesteros · Stefani Francisca Verdugo Toledo  
+**Equipo N°:** 1
 
 ## Descripción
 Aplicación Android (MVP académico) que permite a los vecinos activar una alerta
