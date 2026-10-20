@@ -3,7 +3,7 @@
 Evaluación Parcial 2 · DSY1105 Desarrollo de Aplicaciones Móviles · Duoc UC
 Caso: Junta de Vecinos Población Zaror (Cerrillos)
 
-**Integrantes:** Diego Alejandro González Ballesteros · Stefani Francisca Verdugo Toledo  
+**Integrantes:** Diego Alejandro González Ballesteros · Stefani Francisca Verdugo Toledo · Manuel Orellana
 **Equipo N°:** 1
 
 ## Descripción
