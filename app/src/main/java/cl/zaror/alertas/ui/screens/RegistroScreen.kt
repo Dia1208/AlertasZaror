@@ -34,9 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cl.zaror.alertas.domain.Roles
 import cl.zaror.alertas.ui.components.CampoTexto
-import cl.zaror.alertas.ui.components.SelectorChips
 import cl.zaror.alertas.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,34 +51,86 @@ fun RegistroScreen(vm: AuthViewModel, onVolver: () -> Unit) {
         }
     }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Crear cuenta") },
-            navigationIcon = {
-                IconButton(onClick = { vm.limpiarRegistro(); onVolver() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Crear cuenta") },
+                navigationIcon = {
+                    IconButton(onClick = { vm.limpiarRegistro(); onVolver() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
+                    }
                 }
-            }
-        )
-    }) { relleno ->
+            )
+        }
+    ) { relleno ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(relleno).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(relleno)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CampoTexto(e.nombre.valor, vm::onNombre, "Nombre completo", Icons.Default.Person, e.nombre.error)
-            CampoTexto(e.correo.valor, vm::onCorreo, "Correo", Icons.Default.Email, e.correo.error, teclado = KeyboardType.Email)
-            CampoTexto(e.telefono.valor, vm::onTelefono, "Teléfono (9XXXXXXXX)", Icons.Default.Phone, e.telefono.error, teclado = KeyboardType.Phone)
-            CampoTexto(e.direccion.valor, vm::onDireccion, "Dirección en la población", Icons.Default.Home, e.direccion.error)
-            CampoTexto(e.clave.valor, vm::onClave, "Contraseña", Icons.Default.Lock, e.clave.error, esClave = true)
-            SelectorChips("Rol en la comunidad", Roles.todos, e.rol, null, vm::onRol)
+            CampoTexto(
+                valor = e.nombre.valor,
+                onCambio = vm::onNombre,
+                etiqueta = "Nombre completo",
+                icono = Icons.Default.Person,
+                error = e.nombre.error
+            )
+            CampoTexto(
+                valor = e.correo.valor,
+                onCambio = vm::onCorreo,
+                etiqueta = "Correo",
+                icono = Icons.Default.Email,
+                error = e.correo.error,
+                teclado = KeyboardType.Email
+            )
+            CampoTexto(
+                valor = e.telefono.valor,
+                onCambio = vm::onTelefono,
+                etiqueta = "Teléfono (9XXXXXXXX)",
+                icono = Icons.Default.Phone,
+                error = e.telefono.error,
+                teclado = KeyboardType.Phone
+            )
+            CampoTexto(
+                valor = e.direccion.valor,
+                onCambio = vm::onDireccion,
+                etiqueta = "Dirección en la población",
+                icono = Icons.Default.Home,
+                error = e.direccion.error
+            )
+            CampoTexto(
+                valor = e.clave.valor,
+                onCambio = vm::onClave,
+                etiqueta = "Contraseña",
+                icono = Icons.Default.Lock,
+                error = e.clave.error,
+                esClave = true
+            )
+
+            Text(
+                "Las cuentas nuevas se registran como Vecino/a.",
+                style = MaterialTheme.typography.bodyMedium
+            )
 
             AnimatedVisibility(visible = e.mensaje != null) {
                 Text(e.mensaje ?: "", color = MaterialTheme.colorScheme.error)
             }
-            Button(onClick = vm::registrar, enabled = !e.cargando, modifier = Modifier.fillMaxWidth()) {
-                if (e.cargando) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("Registrarme")
+
+            Button(
+                onClick = vm::registrar,
+                enabled = !e.cargando,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (e.cargando) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Registrarme")
+                }
             }
+
             Text(
                 "Usa datos ficticios: esta es una aplicación académica (MVP).",
                 style = MaterialTheme.typography.bodySmall
