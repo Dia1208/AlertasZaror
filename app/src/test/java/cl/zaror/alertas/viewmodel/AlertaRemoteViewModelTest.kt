@@ -3,8 +3,8 @@ package cl.zaror.alertas.viewmodel
 import cl.zaror.alertas.data.remote.AlertaDTO
 import cl.zaror.alertas.data.remote.AlertaRemoteRepository
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -64,7 +64,8 @@ class AlertaRemoteViewModelTest : StringSpec({
                 advanceUntilIdle()
 
                 vm.alertas.value.shouldBeEmpty()
-                vm.error.value shouldBe "No se pudieron cargar las alertas"
+                vm.error.value shouldBe
+                        "No se pudieron cargar las alertas. Revisa la conexión."
                 coVerify(exactly = 1) { repositorio.listarAlertas() }
             } finally {
                 Dispatchers.resetMain()
@@ -84,7 +85,8 @@ class AlertaRemoteViewModelTest : StringSpec({
                 val vm = AlertaRemoteViewModel(repositorio)
                 advanceUntilIdle()
 
-                vm.error.value shouldBe "No se pudieron cargar las alertas"
+                vm.error.value shouldBe
+                        "No se pudieron cargar las alertas. Revisa la conexión."
 
                 val esperadas = listOf(
                     AlertaDTO(

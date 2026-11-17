@@ -1,59 +1,63 @@
-# Alertas Zaror · App de alarmas comunitarias
+# Alertas Zaror
 
-Evaluación Parcial 2 · DSY1105 Desarrollo de Aplicaciones Móviles · Duoc UC
-Caso: Junta de Vecinos Población Zaror (Cerrillos)
+Aplicación Android para apoyar la comunicación de emergencias de una comunidad. Este proyecto académico integra una app Kotlin/Jetpack Compose, almacenamiento local con Room, un microservicio Spring Boot propio y una consulta externa de geocodificación.
 
-**Integrantes:** Diego Alejandro González Ballesteros · Stefani Francisca Verdugo Toledo · Manuel Orellana
-**Equipo N°:** 1
+## Funcionalidades
 
-## Descripción
-Aplicación Android (MVP académico) que permite a los vecinos activar una alerta
-indicando tipo de emergencia, descripción, ubicación aproximada y foto opcional.
-Todos los vecinos ven el historial centralizado de alertas, el/la Encargado/a
-registra fallas del sistema de alarmas y la Directiva publica comunicados.
-Todos los datos son **ficticios** (protocolo de protección de datos).
+- Registro e inicio de sesión local, con perfiles Vecino/a, Encargado/a y Directiva.
+- Creación de alertas con tipo, descripción, ubicación aproximada y fotografía opcional.
+- Consulta de alertas remotas y operaciones de actualización y eliminación desde la pantalla de alertas.
+- Envío de nuevas alertas al microservicio Spring Boot; la app también conserva una copia local en Room.
+- Registro de ubicación aproximada mediante GPS y búsqueda inversa de dirección en OpenStreetMap Nominatim. Si la consulta falla, la app usa coordenadas aproximadas.
+- Formularios validados, permisos de ubicación/cámara y pruebas unitarias y de interfaz.
 
-## Funcionalidades implementadas
-- Registro e inicio de sesión (contraseña guardada como hash SHA-256).
-- Roles: Vecino/a, Encargado/a, Directiva.
-- Activar alarma (tipo, descripción, ubicación, foto) y ver historial/detalle.
-- Marcar alertas como resueltas (Encargado/a y Directiva).
-- Reporte y seguimiento de fallas del sistema (Encargado/a).
-- Comunicados a la comunidad (Directiva).
-- Formularios con validación por campo, íconos y mensajes de error animados.
-- Animaciones: pulso del botón de alarma, transiciones de navegación, cambio
-  de color por estado, aparición/ocultamiento de formularios y errores.
-- Persistencia local con Room (SQLite).
-- Recursos nativos: **ubicación (GPS)** y **cámara**, con solicitud de permisos
-  en tiempo de ejecución y FileProvider para guardar la foto de forma segura.
+Los datos utilizados con fines académicos deben ser ficticios. El inicio de sesión se almacena localmente y no reemplaza un sistema de autenticación de producción.
 
-## Arquitectura (MVVM)
-```
-app/src/main/java/cl/zaror/alertas
-├── data/          Room: entidades, DAOs, base de datos y Repositorio
-├── domain/        Validaciones (lógica pura, testeable) y constantes
-├── viewmodel/     AuthViewModel, AlertasViewModel, GestionViewModel + estados
-├── recursos/      Acceso a recursos nativos (cámara, ubicación)
-└── ui/            Tema, componentes reutilizables, pantallas y navegación
-```
-- La **UI solo dibuja** el estado que expone el ViewModel (StateFlow).
-- Las **validaciones** viven en `domain/Validaciones.kt` y se invocan desde los ViewModel.
-- Los ViewModel hablan con el `Repositorio`, nunca directamente con Room.
+## Requisitos
 
-## Cómo ejecutar
-1. Clonar el repositorio y abrir la carpeta en **Android Studio** (Koala o superior, JDK 17).
-2. Esperar la sincronización de Gradle.
-3. Crear/seleccionar un emulador Android (API 26+) o un teléfono físico.
-4. Presionar **Run ▶**.
-5. Registrar un usuario (datos ficticios) y probar según el rol elegido.
-   - Para probar ubicación en el emulador: *Extended controls → Location → Set location*.
-   - Para probar cámara: el emulador usa una cámara virtual.
+- Android Studio y JDK 17.
+- Emulador o dispositivo Android con API 26 o superior.
+- Para crear y sincronizar alertas remotas: MySQL y el repositorio `microservicioalertas` ejecutándose en el computador.
+- Conexión a internet para dependencias Gradle y la geocodificación Nominatim.
+
+## Ejecutar la app
+
+1. Clona este repositorio y abre su carpeta en Android Studio.
+2. Espera a que termine la sincronización de Gradle y selecciona un emulador o dispositivo.
+3. Inicia primero el microservicio siguiendo su README. El servicio debe escuchar en el puerto `8081`.
+4. Ejecuta la configuración `app` desde Android Studio.
+5. Para probar GPS en un emulador: **Extended controls → Location**, define una ubicación y vuelve al formulario de alerta.
+
+La configuración de Retrofit usa `http://10.0.2.2:8081/`, la dirección del computador vista desde el emulador Android estándar. En un teléfono físico, configura la dirección IP local del computador y asegúrate de que ambos estén en la misma red. No publiques el servicio en una red no confiable usando HTTP.
+
+## API externa de geocodificación
+
+La app consulta el endpoint de geocodificación inversa de OpenStreetMap Nominatim para convertir las coordenadas elegidas en una referencia legible. La ubicación se redondea a tres decimales antes de consultarla y se etiqueta como aproximada. La interfaz acredita a OpenStreetMap. La geocodificación depende de disponibilidad de internet y de los datos cartográficos, por lo que puede devolver un lugar cercano y no una dirección exacta.
 
 ## Pruebas
-`./gradlew test` ejecuta las pruebas unitarias de validaciones.
 
-## Trello
-Enlace al tablero: _pegar aquí_
+Desde PowerShell en la raíz del proyecto, o desde la terminal de Android Studio:
 
-## Próximas etapas (EFT)
-Microservicio Spring Boot + Retrofit, notificaciones push y APK firmado en release.
+```powershell
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:connectedDebugAndroidTest
+```
+
+La primera tarea ejecuta pruebas locales de lógica, repositorios y ViewModels. La segunda requiere un emulador activo o un dispositivo conectado.
+
+## APK firmado (release)
+
+1. En Android Studio, selecciona **Build → Generate Signed Bundle / APK → APK**.
+2. Crea o selecciona un archivo de claves `.jks`, ingresa su contraseña y alias, y selecciona la variante `release`.
+3. Sigue la ubicación de salida que muestra el asistente. `assembleRelease` por sí sola genera `app/build/outputs/apk/release/app-release-unsigned.apk`, que no está firmado.
+4. Conserva el `.jks` y sus contraseñas en un respaldo privado. No los subas a Git ni los compartas: se necesitan para firmar futuras actualizaciones con la misma identidad.
+
+## Arquitectura
+
+El código Android se organiza bajo `app/src/main/java/cl/zaror/alertas`:
+
+- `data`: entidades, Room, repositorios y clientes Retrofit.
+- `domain`: reglas de validación.
+- `viewmodel`: estado y lógica de presentación.
+- `recursos`: acceso a recursos nativos como cámara y ubicación.
+- `ui`: pantallas Compose, componentes, tema y navegación.

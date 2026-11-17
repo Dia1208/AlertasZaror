@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.zaror.alertas.data.remote.AlertaDTO
 import cl.zaror.alertas.data.remote.AlertaRemoteRepository
+import cl.zaror.alertas.data.remote.NuevaAlertaRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,9 @@ class AlertaRemoteViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _procesando = MutableStateFlow(false)
+    val procesando: StateFlow<Boolean> = _procesando.asStateFlow()
+
     init {
         cargarAlertas()
     }
@@ -32,7 +36,58 @@ class AlertaRemoteViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _error.value = "No se pudieron cargar las alertas"
+                _error.value = "No se pudieron cargar las alertas. Revisa la conexión."
+            }
+        }
+    }
+
+    fun cambiarEstado(alerta: AlertaDTO) {
+        val nuevoEstado =
+            if (alerta.estado.equals("Activa", ignoreCase = true)) {
+                "Resuelta"
+            } else {
+                "Activa"
+            }
+
+        val solicitud = NuevaAlertaRequest(
+            titulo = alerta.titulo,
+            descripcion = alerta.descripcion,
+            tipo = alerta.tipo,
+            ubicacion = alerta.ubicacion,
+            estado = nuevoEstado
+        )
+
+        viewModelScope.launch {
+            _procesando.value = true
+            _error.value = null
+
+            try {
+                repositorio.actualizarAlerta(alerta.id, solicitud)
+                cargarAlertas()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _error.value = "No se pudo actualizar la alerta."
+            } finally {
+                _procesando.value = false
+            }
+        }
+    }
+
+    fun eliminarAlerta(id: Long) {
+        viewModelScope.launch {
+            _procesando.value = true
+            _error.value = null
+
+            try {
+                repositorio.eliminarAlerta(id)
+                _alertas.value = _alertas.value.filterNot { it.id == id }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _error.value = "No se pudo eliminar la alerta."
+            } finally {
+                _procesando.value = false
             }
         }
     }

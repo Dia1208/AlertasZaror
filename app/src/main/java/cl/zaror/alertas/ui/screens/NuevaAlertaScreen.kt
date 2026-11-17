@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +46,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.zaror.alertas.domain.Opciones
 import cl.zaror.alertas.recursos.crearUriFoto
@@ -59,122 +59,209 @@ import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NuevaAlertaScreen(vm: AlertasViewModel, auth: AuthViewModel, onVolver: () -> Unit) {
-    val e by vm.nueva.collectAsStateWithLifecycle()
+fun NuevaAlertaScreen(
+    vm: AlertasViewModel,
+    auth: AuthViewModel,
+    onVolver: () -> Unit
+) {
+    val estado by vm.nueva.collectAsStateWithLifecycle()
     val usuario by auth.usuario.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
     var uriTemporal by remember { mutableStateOf<Uri?>(null) }
 
-    LaunchedEffect(Unit) { vm.reiniciar() }
-    LaunchedEffect(e.guardada) {
-        if (e.guardada) {
-            Toast.makeText(contexto, "Alerta enviada a los vecinos", Toast.LENGTH_SHORT).show()
+    LaunchedEffect(Unit) {
+        vm.reiniciar()
+    }
+
+    LaunchedEffect(estado.guardada) {
+        if (estado.guardada) {
+            Toast.makeText(contexto, "Alerta enviada al servidor", Toast.LENGTH_SHORT).show()
             vm.reiniciar()
             onVolver()
         }
     }
 
-    // ----- Cámara -----
-    val lanzarCamara = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) vm.onFoto(uriTemporal?.toString())
-    }
-    val pedirCamara = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) {
-            val uri = crearUriFoto(contexto)
-            uriTemporal = uri
-            lanzarCamara.launch(uri)
-        } else {
-            Toast.makeText(contexto, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show()
+    val lanzarCamara =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+            if (ok) vm.onFoto(uriTemporal?.toString())
         }
-    }
 
-    // ----- Ubicación -----
-    val pedirUbicacion = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
-        if (r.values.any { it }) obtenerUbicacion(contexto, vm::onUbicacion, vm::onErrorUbicacion)
-        else vm.onErrorUbicacion("Permiso de ubicación denegado")
-    }
-
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Activar alarma") },
-            navigationIcon = {
-                IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
+    val pedirCamara =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+            if (ok) {
+                val uri = crearUriFoto(contexto)
+                uriTemporal = uri
+                lanzarCamara.launch(uri)
+            } else {
+                Toast.makeText(contexto, "Permiso de cámara denegado", Toast.LENGTH_SHORT).show()
             }
-        )
-    }) { relleno ->
+        }
+
+    val pedirUbicacion =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { resultado ->
+            if (resultado.values.any { it }) {
+                obtenerUbicacion(contexto, vm::onUbicacion, vm::onErrorUbicacion)
+            } else {
+                vm.onErrorUbicacion("Permiso de ubicación denegado")
+            }
+        }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Activar alarma") },
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
+                    }
+                }
+            )
+        }
+    ) { relleno ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(relleno).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(relleno)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SelectorChips("Tipo de emergencia", Opciones.tiposAlerta, e.tipo, e.tipoError, vm::onTipo)
-
-            CampoTexto(
-                valor = e.descripcion.valor, onCambio = vm::onDescripcion,
-                etiqueta = "¿Qué está pasando?", icono = Icons.Default.Description,
-                error = e.descripcion.error, minLineas = 3
+            SelectorChips(
+                titulo = "Tipo de emergencia",
+                opciones = Opciones.tiposAlerta,
+                seleccionado = estado.tipo,
+                error = estado.tipoError,
+                onSeleccion = vm::onTipo
             )
 
-            // Ubicación
+            CampoTexto(
+                valor = estado.descripcion.valor,
+                onCambio = vm::onDescripcion,
+                etiqueta = "¿Qué está pasando?",
+                icono = Icons.Default.Description,
+                error = estado.descripcion.error,
+                minLineas = 3
+            )
+
             OutlinedButton(
                 onClick = {
-                    if (tienePermiso(contexto, Manifest.permission.ACCESS_FINE_LOCATION) ||
+                    if (
+                        tienePermiso(contexto, Manifest.permission.ACCESS_FINE_LOCATION) ||
                         tienePermiso(contexto, Manifest.permission.ACCESS_COARSE_LOCATION)
-                    ) obtenerUbicacion(contexto, vm::onUbicacion, vm::onErrorUbicacion)
-                    else pedirUbicacion.launch(
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-                    )
+                    ) {
+                        obtenerUbicacion(contexto, vm::onUbicacion, vm::onErrorUbicacion)
+                    } else {
+                        pedirUbicacion.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.MyLocation, null)
+                Icon(Icons.Default.MyLocation, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Adjuntar ubicación aproximada")
             }
-            AnimatedVisibility(visible = e.latitud != null && e.longitud != null) {
-                Text("Ubicación: ${e.latitud}, ${e.longitud}", color = MaterialTheme.colorScheme.tertiary)
-            }
-            AnimatedVisibility(visible = e.mensajeUbicacion != null) {
-                Text(e.mensajeUbicacion ?: "", color = MaterialTheme.colorScheme.error)
+
+            AnimatedVisibility(estado.latitud != null && estado.longitud != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (estado.consultandoDireccion) {
+                        Text(
+                            "Buscando dirección aproximada en OpenStreetMap…",
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        CircularProgressIndicator()
+                    } else {
+                        Text(
+                            estado.direccionAproximada
+                                ?: "Coordenadas aproximadas disponibles",
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                    Text(
+                        "Dirección sugerida por OpenStreetMap; puede ser aproximada. © OpenStreetMap contributors.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
 
-            // Cámara (opcional)
+            AnimatedVisibility(estado.mensajeUbicacion != null) {
+                Text(
+                    estado.mensajeUbicacion.orEmpty(),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             OutlinedButton(
                 onClick = {
                     if (tienePermiso(contexto, Manifest.permission.CAMERA)) {
                         val uri = crearUriFoto(contexto)
                         uriTemporal = uri
                         lanzarCamara.launch(uri)
-                    } else pedirCamara.launch(Manifest.permission.CAMERA)
+                    } else {
+                        pedirCamara.launch(Manifest.permission.CAMERA)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Default.CameraAlt, null)
+                Icon(Icons.Default.CameraAlt, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Adjuntar foto (opcional)")
             }
-            AnimatedVisibility(visible = e.fotoUri != null) {
+
+            AnimatedVisibility(estado.fotoUri != null) {
                 Column {
                     AsyncImage(
-                        model = e.fotoUri,
+                        model = estado.fotoUri,
                         contentDescription = "Foto de la alerta",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
-                    TextButton(onClick = { vm.onFoto(null) }) { Text("Quitar foto") }
+                    TextButton(onClick = { vm.onFoto(null) }) {
+                        Text("Quitar foto")
+                    }
                 }
+            }
+
+            AnimatedVisibility(estado.errorEnvio != null) {
+                Text(
+                    text = estado.errorEnvio.orEmpty(),
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Button(
                 onClick = { vm.activar(usuario?.nombre ?: "Vecino/a") },
+                enabled = !estado.enviando && !estado.consultandoDireccion,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
             ) {
-                Icon(Icons.Default.NotificationsActive, null)
+                Icon(Icons.Default.NotificationsActive, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Enviar alerta")
+                Text(
+                    when {
+                        estado.enviando -> "Enviando alerta…"
+                        estado.consultandoDireccion -> "Buscando dirección…"
+                        else -> "Enviar alerta"
+                    }
+                )
             }
+
             Text(
-                "Datos ficticios: no se usan datos reales de personas (protocolo de protección de datos).",
+                "La ubicación aproximada se consulta con OpenStreetMap y se envía junto con la alerta.",
                 style = MaterialTheme.typography.bodySmall
             )
         }

@@ -1,7 +1,10 @@
 package cl.zaror.alertas.viewmodel
 
 /** Un campo de formulario: su texto y su error (null = válido). */
-data class Campo(val valor: String = "", val error: String? = null)
+data class Campo(
+    val valor: String = "",
+    val error: String? = null
+)
 
 data class LoginState(
     val correo: Campo = Campo(),
@@ -30,7 +33,11 @@ data class NuevaAlertaState(
     val longitud: Double? = null,
     val fotoUri: String? = null,
     val mensajeUbicacion: String? = null,
-    val guardada: Boolean = false
+    val direccionAproximada: String? = null,
+    val consultandoDireccion: Boolean = false,
+    val guardada: Boolean = false,
+    val enviando: Boolean = false,
+    val errorEnvio: String? = null
 )
 
 data class FallaForm(
