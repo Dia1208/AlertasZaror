@@ -3,6 +3,8 @@ package cl.zaror.alertas.data.remote
 class AlertaRemoteRepository(
     private val api: AlertaApi = RetrofitInstance.api
 ) {
+    suspend fun buscarAlerta(id: Long) = api.buscarAlerta(id)
+
     suspend fun listarAlertas(): List<AlertaDTO> =
         api.listarAlertas()
 

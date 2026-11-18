@@ -14,6 +14,9 @@ class Repositorio(db: AppDatabase) {
     val fallas: Flow<List<Falla>> = fallaDao.todas()
     val comunicados: Flow<List<Comunicado>> = comunicadoDao.todos()
 
+    suspend fun actualizarRemota(id: Long, estado: String) = alertaDao.actualizarRemota(id, estado)
+    suspend fun eliminarRemota(id: Long) = alertaDao.eliminarRemota(id)
+
     fun alerta(id: Int): Flow<Alerta?> = alertaDao.porId(id)
 
     suspend fun registrar(usuario: Usuario): Boolean =

@@ -108,8 +108,16 @@ class AlertasViewModel(
         _nueva.update { it.copy(fotoUri = uri) }
     }
 
+    private var copiaPendiente: Alerta? = null
+
     fun activar(autor: String) {
         val formulario = _nueva.value
+        if (formulario.enviando || formulario.guardada || formulario.consultandoDireccion) return
+        copiaPendiente?.let { copia ->
+            _nueva.update { it.copy(enviando = true) }
+            viewModelScope.launch { guardarCopia(copia) }
+            return
+        }
         val errorTipo = Validaciones.seleccion(formulario.tipo, "un tipo de alerta")
         val errorDescripcion = Validaciones.texto(
             formulario.descripcion.valor,
@@ -128,10 +136,9 @@ class AlertasViewModel(
             return
         }
 
-        if (formulario.enviando || formulario.consultandoDireccion) return
+        _nueva.update { it.copy(enviando = true, errorEnvio = null) }
 
         viewModelScope.launch {
-            _nueva.update { it.copy(enviando = true, errorEnvio = null) }
             try {
                 val ubicacion = when {
                     formulario.direccionAproximada != null ->
@@ -152,8 +159,9 @@ class AlertasViewModel(
                     )
                 )
 
-                repo.insertarAlerta(
+                guardarCopia(
                     Alerta(
+                        idRemoto = respuesta.id,
                         tipo = respuesta.tipo,
                         descripcion = respuesta.descripcion,
                         latitud = formulario.latitud,
@@ -165,9 +173,6 @@ class AlertasViewModel(
                     )
                 )
 
-                _nueva.update {
-                    it.copy(enviando = false, guardada = true, errorEnvio = null)
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -183,13 +188,45 @@ class AlertasViewModel(
         }
     }
 
+    private suspend fun guardarCopia(copia: Alerta) {
+        copiaPendiente = copia
+        try {
+            repo.insertarAlerta(copia)
+            copiaPendiente = null
+            _nueva.update { it.copy(enviando = false, guardada = true, pendienteLocal = false, errorEnvio = null) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _nueva.update { it.copy(enviando = false, pendienteLocal = true) }
+        }
+    }
+
     fun reiniciar() {
+        if (copiaPendiente != null || _nueva.value.enviando) return
         _nueva.value = NuevaAlertaState()
     }
 
-    fun cambiarEstado(id: Int, estado: String) {
+    private val _errorEstado = MutableStateFlow<String?>(null)
+    val errorEstado = _errorEstado.asStateFlow()
+
+    fun cambiarEstado(alerta: Alerta, estado: String) {
         viewModelScope.launch {
-            repo.cambiarEstadoAlerta(id, estado)
+            _errorEstado.value = null
+            try {
+                val id = alerta.idRemoto
+                if (id == null) {
+                    repo.cambiarEstadoAlerta(alerta.id, estado)
+                } else {
+                    val a = remoto.buscarAlerta(id)
+                    val respuesta = remoto.actualizarAlerta(id,
+                        NuevaAlertaRequest(a.titulo, a.descripcion, a.tipo, a.ubicacion, estado))
+                    repo.actualizarRemota(id, respuesta.estado)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _errorEstado.value = "No se pudo sincronizar el estado de la alerta."
+            }
         }
     }
 }

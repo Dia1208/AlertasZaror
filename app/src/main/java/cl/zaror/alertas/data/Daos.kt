@@ -20,6 +20,12 @@ interface AlertaDao {
     @Query("SELECT * FROM alertas ORDER BY fecha DESC")
     fun todas(): Flow<List<Alerta>>
 
+    @Query("UPDATE alertas SET estado = :estado WHERE idRemoto = :id")
+    suspend fun actualizarRemota(id: Long, estado: String)
+
+    @Query("DELETE FROM alertas WHERE idRemoto = :id")
+    suspend fun eliminarRemota(id: Long)
+
     @Query("SELECT * FROM alertas WHERE id = :id")
     fun porId(id: Int): Flow<Alerta?>
 

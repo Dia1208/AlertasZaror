@@ -116,10 +116,12 @@ fun DetalleAlertaScreen(id: Int, vm: AlertasViewModel, auth: AuthViewModel, onVo
                         modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(12.dp))
                     )
                 }
+                val errorEstado by vm.errorEstado.collectAsStateWithLifecycle()
+                errorEstado?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 val puedeResolver = usuario?.rol == Roles.ENCARGADO || usuario?.rol == Roles.DIRECTIVA
                 if (puedeResolver && a.estado == Estados.ACTIVA) {
                     Button(
-                        onClick = { vm.cambiarEstado(a.id, Estados.RESUELTA) },
+                        onClick = { vm.cambiarEstado(a, Estados.RESUELTA) },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Marcar como resuelta") }
                 }

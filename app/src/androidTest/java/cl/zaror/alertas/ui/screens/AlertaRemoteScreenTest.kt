@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import cl.zaror.alertas.data.remote.NuevaAlertaRequest
 import cl.zaror.alertas.data.remote.AlertaApi
 import cl.zaror.alertas.data.remote.AlertaDTO
 import cl.zaror.alertas.data.remote.AlertaRemoteRepository
@@ -26,7 +27,7 @@ class AlertaRemoteScreenTest {
 
     @Test
     fun muestraLaAlertaRecibida() {
-        val apiSimulada = object : AlertaApi {
+        val apiSimulada = object : ApiDeLectura {
             override suspend fun listarAlertas(): List<AlertaDTO> {
                 return listOf(
                     AlertaDTO(
@@ -54,7 +55,7 @@ class AlertaRemoteScreenTest {
 
     @Test
     fun muestraElErrorCuandoFallaLaConexion() {
-        val apiSimulada = object : AlertaApi {
+        val apiSimulada = object : ApiDeLectura {
             override suspend fun listarAlertas(): List<AlertaDTO> {
                 throw IOException("Sin conexión")
             }
@@ -97,4 +98,10 @@ class AlertaRemoteScreenTest {
             }
         }
     }
+}
+private interface ApiDeLectura : AlertaApi {
+    override suspend fun buscarAlerta(id: Long) = listarAlertas().first { it.id == id }
+    override suspend fun crearAlerta(solicitud: NuevaAlertaRequest): AlertaDTO = error("Operación inesperada")
+    override suspend fun actualizarAlerta(id: Long, solicitud: NuevaAlertaRequest): AlertaDTO = error("Operación inesperada")
+    override suspend fun eliminarAlerta(id: Long): Unit = error("Operación inesperada")
 }

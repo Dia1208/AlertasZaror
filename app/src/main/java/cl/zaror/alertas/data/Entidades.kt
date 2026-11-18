@@ -25,7 +25,8 @@ data class Alerta(
     val fotoUri: String?,
     val autor: String,
     val fecha: Long,
-    val estado: String = "Activa"
+    val estado: String = "Activa",
+    val idRemoto: Long? = null
 )
 
 @Entity(tableName = "fallas")

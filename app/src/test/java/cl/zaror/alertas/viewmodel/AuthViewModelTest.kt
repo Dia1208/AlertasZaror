@@ -52,4 +52,74 @@ class AuthViewModelTest : StringSpec({
             }
         }
     }
+
+    "inicia sesión con correo normalizado y permite cerrarla" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                val usuario = Usuario(nombre = "Ana", correo = "ana@correo.cl", telefono = "912345678",
+                    direccion = "Pasaje Norte", claveHash = "hash", rol = Roles.VECINO)
+                coEvery { repo.iniciarSesion("ana@correo.cl", any()) } returns usuario
+                val vm = AuthViewModel(repo)
+                vm.onLoginCorreo(" ANA@CORREO.CL ")
+                vm.onLoginClave("Zaror2026")
+                vm.iniciarSesion()
+                advanceUntilIdle()
+                vm.usuario.value shouldBe usuario
+                vm.login.value shouldBe LoginState()
+                vm.cerrarSesion()
+                vm.usuario.value shouldBe null
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "muestra error de credenciales sin iniciar sesión" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                coEvery { repo.iniciarSesion(any(), any()) } returns null
+                val vm = AuthViewModel(repo)
+                vm.iniciarSesion()
+                vm.login.value.correo.error shouldBe "El correo es obligatorio"
+                vm.onLoginCorreo("ana@correo.cl")
+                vm.onLoginClave("Incorrecta1")
+                vm.iniciarSesion()
+                advanceUntilIdle()
+                vm.usuario.value shouldBe null
+                vm.login.value.mensaje shouldBe "Correo o contraseña incorrectos"
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "rechaza correo duplicado y permite limpiar el formulario" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                coEvery { repo.registrar(any()) } returns false
+                val vm = AuthViewModel(repo)
+                vm.registrar()
+                vm.registro.value.nombre.error shouldBe "El nombre es obligatorio"
+                vm.onNombre("Ana Vecina")
+                vm.onCorreo("ana@correo.cl")
+                vm.onTelefono("912345678")
+                vm.onDireccion("Pasaje Norte")
+                vm.onClave("Zaror2026")
+                vm.registrar()
+                advanceUntilIdle()
+                vm.registro.value.mensaje shouldBe "Ese correo ya está registrado"
+                vm.registro.value.exito shouldBe false
+                vm.limpiarRegistro()
+                vm.registro.value shouldBe RegistroState()
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
 })

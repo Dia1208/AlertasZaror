@@ -36,6 +36,7 @@ data class NuevaAlertaState(
     val direccionAproximada: String? = null,
     val consultandoDireccion: Boolean = false,
     val guardada: Boolean = false,
+    val pendienteLocal: Boolean = false,
     val enviando: Boolean = false,
     val errorEnvio: String? = null
 )

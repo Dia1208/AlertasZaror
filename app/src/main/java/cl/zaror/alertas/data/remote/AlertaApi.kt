@@ -12,6 +12,9 @@ interface AlertaApi {
     @GET("alertas")
     suspend fun listarAlertas(): List<AlertaDTO>
 
+    @GET("alertas/{id}")
+    suspend fun buscarAlerta(@Path("id") id: Long): AlertaDTO
+
     @POST("alertas")
     suspend fun crearAlerta(
         @Body solicitud: NuevaAlertaRequest

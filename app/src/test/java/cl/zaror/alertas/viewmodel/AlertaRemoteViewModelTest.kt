@@ -2,6 +2,7 @@ package cl.zaror.alertas.viewmodel
 
 import cl.zaror.alertas.data.remote.AlertaDTO
 import cl.zaror.alertas.data.remote.AlertaRemoteRepository
+import cl.zaror.alertas.data.Repositorio
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -106,6 +107,56 @@ class AlertaRemoteViewModelTest : StringSpec({
                 vm.alertas.value.shouldContainExactly(esperadas)
                 vm.error.value shouldBe null
                 coVerify(exactly = 2) { repositorio.listarAlertas() }
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "actualiza el estado remoto y la copia local" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val remoto = mockk<AlertaRemoteRepository>()
+                val local = mockk<Repositorio>()
+                val activa = AlertaDTO(7L, "Robo", "Robo en el pasaje", "Robo", "Centro", "Activa")
+                val resuelta = activa.copy(estado = "Resuelta")
+                coEvery { remoto.listarAlertas() } returnsMany listOf(listOf(activa), listOf(resuelta))
+                coEvery { remoto.actualizarAlerta(7L, any()) } returns resuelta
+                coEvery { local.actualizarRemota(7L, "Resuelta") } returns Unit
+                val vm = AlertaRemoteViewModel(remoto, local)
+                advanceUntilIdle()
+                vm.cambiarEstado(activa)
+                advanceUntilIdle()
+                vm.alertas.value shouldBe listOf(resuelta)
+                vm.error.value shouldBe null
+                coVerify(exactly = 1) {
+                    remoto.actualizarAlerta(7L, match { it.estado == "Resuelta" })
+                }
+                coVerify(exactly = 1) { local.actualizarRemota(7L, "Resuelta") }
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "conserva la alerta y muestra error cuando falla su eliminación" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val remoto = mockk<AlertaRemoteRepository>()
+                val local = mockk<Repositorio>()
+                val alerta = AlertaDTO(8L, "Robo", "Robo en el pasaje", "Robo", "Centro", "Activa")
+                coEvery { remoto.listarAlertas() } returns listOf(alerta)
+                coEvery { remoto.eliminarAlerta(8L) } throws IOException("Sin conexión")
+                val vm = AlertaRemoteViewModel(remoto, local)
+                advanceUntilIdle()
+                vm.eliminarAlerta(8L)
+                advanceUntilIdle()
+                vm.alertas.value shouldBe listOf(alerta)
+                vm.error.value shouldBe "No se pudo eliminar la alerta."
+                vm.procesando.value shouldBe false
+                coVerify(exactly = 0) { local.eliminarRemota(any()) }
             } finally {
                 Dispatchers.resetMain()
             }

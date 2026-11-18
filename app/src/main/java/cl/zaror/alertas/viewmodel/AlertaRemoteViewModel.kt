@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AlertaRemoteViewModel(
-    private val repositorio: AlertaRemoteRepository = AlertaRemoteRepository()
+    private val repositorio: AlertaRemoteRepository = AlertaRemoteRepository(),
+    private val local: cl.zaror.alertas.data.Repositorio? = null
 ) : ViewModel() {
 
     private val _alertas = MutableStateFlow<List<AlertaDTO>>(emptyList())
@@ -62,7 +63,8 @@ class AlertaRemoteViewModel(
             _error.value = null
 
             try {
-                repositorio.actualizarAlerta(alerta.id, solicitud)
+                val respuesta = repositorio.actualizarAlerta(alerta.id, solicitud)
+                local?.actualizarRemota(alerta.id, respuesta.estado)
                 cargarAlertas()
             } catch (e: CancellationException) {
                 throw e
@@ -81,6 +83,7 @@ class AlertaRemoteViewModel(
 
             try {
                 repositorio.eliminarAlerta(id)
+                local?.eliminarRemota(id)
                 _alertas.value = _alertas.value.filterNot { it.id == id }
             } catch (e: CancellationException) {
                 throw e

@@ -131,6 +131,13 @@ fun NuevaAlertaScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (estado.pendienteLocal) {
+                Text("La alerta ya llegó al servidor. Falta guardar la copia en este dispositivo.")
+                Button(onClick = { vm.activar(usuario?.nombre ?: "Vecino/a") }, enabled = !estado.enviando) {
+                    Text("Reintentar guardado local")
+                }
+                return@Column
+            }
             SelectorChips(
                 titulo = "Tipo de emergencia",
                 opciones = Opciones.tiposAlerta,

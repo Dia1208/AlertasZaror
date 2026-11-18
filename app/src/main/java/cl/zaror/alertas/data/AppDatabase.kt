@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Usuario::class, Alerta::class, Falla::class, Comunicado::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -18,6 +18,10 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         fun crear(contexto: Context): AppDatabase =
-            Room.databaseBuilder(contexto, AppDatabase::class.java, "zaror.db").build()
+            Room.databaseBuilder(contexto, AppDatabase::class.java, "zaror.db").addMigrations(object : androidx.room.migration.Migration(1, 2) {
+                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE alertas ADD COLUMN idRemoto INTEGER")
+                }
+            }).build()
     }
 }

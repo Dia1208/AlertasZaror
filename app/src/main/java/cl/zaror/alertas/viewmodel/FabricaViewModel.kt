@@ -26,6 +26,9 @@ class FabricaViewModel(
             modelClass.isAssignableFrom(GestionViewModel::class.java) ->
                 GestionViewModel(repo)
 
+            modelClass.isAssignableFrom(AlertaRemoteViewModel::class.java) ->
+                AlertaRemoteViewModel(local = repo)
+
             else ->
                 throw IllegalArgumentException(
                     "ViewModel desconocido: " + modelClass.name
