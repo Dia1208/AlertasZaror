@@ -64,7 +64,7 @@ class AlertaRemoteScreenTest {
         mostrarPantalla(apiSimulada)
 
         composeRule
-            .onNodeWithText("No se pudieron cargar las alertas")
+            .onNodeWithText("No se pudieron cargar las alertas. Revisa la conexión.")
             .assertIsDisplayed()
 
         composeRule
