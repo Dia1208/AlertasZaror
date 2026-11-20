@@ -58,42 +58,49 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _login.update { it.copy(cargando = true) }
-            val usuario = repo.iniciarSesion(
-                s.correo.valor.trim().lowercase(),
-                sha256(s.clave.valor)
-            )
-
-            if (usuario == null) {
-                _login.update {
-                    it.copy(
-                        cargando = false,
-                        mensaje = "Correo o contraseña incorrectos"
-                    )
-                }
-            } else {
-                try {
-                    val perfil = remoto.autenticar(
-                        usuario.correo, s.clave.valor, usuario.rol
-                    )
+            val correo = s.correo.valor.trim().lowercase()
+            try {
+                    val local = repo.usuarioPorCorreo(correo)
+                    val perfil = remoto.autenticar(correo, s.clave.valor, local?.rol)
                     val rolServidor = when (perfil.rol) {
                         "VECINO" -> Roles.VECINO
                         "ENCARGADO" -> Roles.ENCARGADO
                         "DIRECTIVA" -> Roles.DIRECTIVA
                         else -> null
                     }
-                    if (rolServidor != usuario.rol) {
-                        _login.update { it.copy(cargando = false, mensaje = "El rol no coincide con el servidor") }
+                    if (rolServidor == null) {
+                        _login.update { it.copy(cargando = false, mensaje = "Rol de servidor desconocido") }
                     } else {
-                        ApiSession.establecer(usuario.correo, s.clave.valor)
+                        val usuario = if (local == null) {
+                            val nuevo = Usuario(
+                                nombre = perfil.nombre?.takeIf { it.isNotBlank() }
+                                    ?: correo.substringBefore('@'),
+                                correo = correo,
+                                telefono = perfil.telefono.orEmpty(),
+                                direccion = perfil.direccion.orEmpty(),
+                                claveHash = sha256(s.clave.valor), rol = rolServidor
+                            )
+                            repo.registrar(nuevo)
+                            repo.usuarioPorCorreo(correo) ?: error("No se pudo guardar la cuenta local")
+                        } else {
+                            val actualizado = local.copy(
+                                claveHash = sha256(s.clave.valor), rol = rolServidor,
+                                nombre = perfil.nombre?.takeIf { it.isNotBlank() } ?: local.nombre,
+                                telefono = perfil.telefono ?: local.telefono,
+                                direccion = perfil.direccion ?: local.direccion
+                            )
+                            repo.actualizarUsuario(actualizado)
+                            actualizado
+                        }
+                        ApiSession.establecer(correo, s.clave.valor)
                         _usuario.value = usuario
                         _login.value = LoginState()
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    _login.update {
-                        it.copy(cargando = false, mensaje = "No se pudo verificar la cuenta con el servidor")
-                    }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _login.update {
+                    it.copy(cargando = false, mensaje = "No se pudo iniciar sesión. Revisa la cuenta y la conexión")
                 }
             }
         }
@@ -171,7 +178,8 @@ class AuthViewModel(
                     _registro.update { it.copy(cargando = false, mensaje = "Ese correo ya está registrado") }
                     return@launch
                 }
-                remoto.registrarVecino(correo, s.clave.valor)
+                remoto.registrarVecino(correo, s.clave.valor,
+                    s.nombre.valor.trim(), s.telefono.valor.trim(), s.direccion.valor.trim())
                 val correcto = repo.registrar(
                     Usuario(
                         nombre = s.nombre.valor.trim(),

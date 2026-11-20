@@ -3,6 +3,9 @@ package cl.zaror.alertas.viewmodel
 import cl.zaror.alertas.data.Comunicado
 import cl.zaror.alertas.data.Falla
 import cl.zaror.alertas.data.Repositorio
+import cl.zaror.alertas.data.remote.GestionRemoteRepository
+import cl.zaror.alertas.data.remote.FallaDTO
+import cl.zaror.alertas.data.remote.ComunicadoDTO
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -26,11 +29,14 @@ class GestionViewModelTest : StringSpec({
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val repo = mockk<Repositorio>()
+                val remoto = mockk<GestionRemoteRepository>()
                 every { repo.fallas } returns flowOf(emptyList())
                 every { repo.comunicados } returns flowOf(emptyList())
                 val guardada = slot<Falla>()
                 coEvery { repo.insertarFalla(capture(guardada)) } returns Unit
-                val vm = GestionViewModel(repo)
+                coEvery { remoto.crearFalla(any()) } returns FallaDTO(11L, "Alumbrado",
+                    "Luminaria apagada", "Alta", "Ana", 1000L, false)
+                val vm = GestionViewModel(repo, remoto)
                 var termino = false
                 vm.reportarFalla("Ana") { termino = true }
                 vm.falla.value.componenteError shouldBe "Selecciona un componente"
@@ -56,12 +62,17 @@ class GestionViewModelTest : StringSpec({
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val repo = mockk<Repositorio>()
+                val remoto = mockk<GestionRemoteRepository>()
                 every { repo.fallas } returns flowOf(emptyList())
                 every { repo.comunicados } returns flowOf(emptyList())
                 val publicado = slot<Comunicado>()
                 coEvery { repo.insertarComunicado(capture(publicado)) } returns Unit
                 coEvery { repo.cambiarResuelta(7, true) } returns Unit
-                val vm = GestionViewModel(repo)
+                coEvery { remoto.crearComunicado(any()) } returns ComunicadoDTO(12L,
+                    "Reunión", "Reunión mañana a las seis", "Directiva", 1000L)
+                coEvery { remoto.resolverFalla(13L, true) } returns FallaDTO(13L,
+                    "Alumbrado", "Luminaria apagada", "Alta", "Ana", 1000L, true)
+                val vm = GestionViewModel(repo, remoto)
                 var termino = false
                 vm.publicarAviso("Directiva") { termino = true }
                 vm.aviso.value.titulo.error shouldBe "El título es obligatorio"
@@ -70,7 +81,9 @@ class GestionViewModelTest : StringSpec({
                 vm.onTituloAviso("Reunión")
                 vm.onMensajeAviso("Reunión mañana a las seis")
                 vm.publicarAviso("Directiva") { termino = true }
-                vm.marcarResuelta(7, true)
+                vm.marcarResuelta(Falla(id = 7, componente = "Alumbrado",
+                    detalle = "Luminaria apagada", prioridad = "Alta", reportadoPor = "Ana",
+                    fecha = 1000L, idRemoto = 13L), true)
                 advanceUntilIdle()
                 publicado.captured.autor shouldBe "Directiva"
                 vm.aviso.value shouldBe AvisoForm()

@@ -8,7 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Usuario::class, Alerta::class, Falla::class, Comunicado::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,6 +35,12 @@ abstract class AppDatabase : RoomDatabase() {
                     sembrarCuentas(db)
                     db.execSQL("""DELETE FROM usuarios WHERE correo IN
                         ('aleencargado@duocuc.cl', 'aledirectiva@duocuc.cl')""".trimIndent())
+                }
+            }, object : androidx.room.migration.Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE alertas ADD COLUMN fotoBase64 TEXT")
+                    db.execSQL("ALTER TABLE fallas ADD COLUMN idRemoto INTEGER")
+                    db.execSQL("ALTER TABLE comunicados ADD COLUMN idRemoto INTEGER")
                 }
             }).build()
 

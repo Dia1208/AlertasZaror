@@ -26,7 +26,8 @@ data class Alerta(
     val autor: String,
     val fecha: Long,
     val estado: String = "Activa",
-    val idRemoto: Long? = null
+    val idRemoto: Long? = null,
+    val fotoBase64: String? = null
 )
 
 @Entity(tableName = "fallas")
@@ -37,7 +38,8 @@ data class Falla(
     val prioridad: String,
     val reportadoPor: String,
     val fecha: Long,
-    val resuelta: Boolean = false
+    val resuelta: Boolean = false,
+    val idRemoto: Long? = null
 )
 
 @Entity(tableName = "comunicados")
@@ -46,5 +48,6 @@ data class Comunicado(
     val titulo: String,
     val mensaje: String,
     val autor: String,
-    val fecha: Long
+    val fecha: Long,
+    val idRemoto: Long? = null
 )

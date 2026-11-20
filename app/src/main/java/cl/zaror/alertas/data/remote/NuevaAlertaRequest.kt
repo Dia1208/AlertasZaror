@@ -5,5 +5,6 @@ data class NuevaAlertaRequest(
     val descripcion: String,
     val tipo: String,
     val ubicacion: String,
-    val estado: String
+    val estado: String,
+    val fotoBase64: String? = null
 )

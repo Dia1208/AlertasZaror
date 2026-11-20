@@ -108,9 +108,13 @@ fun DetalleAlertaScreen(id: Int, vm: AlertasViewModel, auth: AuthViewModel, onVo
                         )
                     }
                 }
-                if (a.fotoUri != null) {
+                if (a.fotoUri != null || a.fotoBase64 != null) {
                     AsyncImage(
-                        model = a.fotoUri,
+                        model = a.fotoUri ?: a.fotoBase64?.let {
+                            runCatching {
+                                android.util.Base64.decode(it, android.util.Base64.DEFAULT)
+                            }.getOrNull()
+                        },
                         contentDescription = "Evidencia fotográfica",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(12.dp))

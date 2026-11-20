@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,8 @@ fun FallasScreen(gestion: GestionViewModel, auth: AuthViewModel) {
     val fallas by gestion.fallas.collectAsStateWithLifecycle()
     val form by gestion.falla.collectAsStateWithLifecycle()
     val usuario by auth.usuario.collectAsStateWithLifecycle()
+    val error by gestion.error.collectAsStateWithLifecycle()
+    LaunchedEffect(usuario?.correo) { if (usuario != null) gestion.actualizarFallas() }
     val esEncargado = usuario?.rol == Roles.ENCARGADO
     var formVisible by remember { mutableStateOf(false) }
 
@@ -56,6 +59,8 @@ fun FallasScreen(gestion: GestionViewModel, auth: AuthViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { Text("Fallas del sistema", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        item { Button(onClick = gestion::actualizarFallas) { Text("Actualizar fallas") } }
+        error?.let { mensaje -> item { Text(mensaje, color = MaterialTheme.colorScheme.error) } }
 
         if (esEncargado) {
             item {
@@ -107,7 +112,7 @@ fun FallasScreen(gestion: GestionViewModel, auth: AuthViewModel) {
                         ChipEstado(if (f.resuelta) "Resuelta" else "Pendiente", if (f.resuelta) MaterialTheme.colorScheme.tertiary else colorDePrioridad(f.prioridad))
                     }
                     if (esEncargado) {
-                        Switch(checked = f.resuelta, onCheckedChange = { gestion.marcarResuelta(f.id, it) })
+                        Switch(checked = f.resuelta, onCheckedChange = { gestion.marcarResuelta(f, it) })
                     }
                 }
             }

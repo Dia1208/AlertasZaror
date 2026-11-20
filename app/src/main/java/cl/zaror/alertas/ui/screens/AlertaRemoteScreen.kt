@@ -1,5 +1,8 @@
 package cl.zaror.alertas.ui.screens
 
+import android.util.Base64
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -140,6 +143,19 @@ private fun TarjetaAlertaRemota(
             Text("Tipo: " + alerta.tipo)
             Text("Ubicación: " + alerta.ubicacion)
             Text("Estado: " + alerta.estado)
+            alerta.fotoBase64?.let { codificada ->
+                val imagen = remember(codificada) {
+                    runCatching { Base64.decode(codificada, Base64.DEFAULT) }.getOrNull()
+                }
+                imagen?.let {
+                    AsyncImage(
+                        model = it,
+                        contentDescription = "Fotografía de la alerta",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(180.dp)
+                    )
+                }
+            }
 
             if (puedeGestionar) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(

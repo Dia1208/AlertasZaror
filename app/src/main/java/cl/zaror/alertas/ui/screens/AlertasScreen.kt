@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -81,6 +83,10 @@ fun AlertasScreen(
 ) {
     val alertas by vm.alertas.collectAsStateWithLifecycle()
     val usuario by auth.usuario.collectAsStateWithLifecycle()
+    val errorSincronizacion by vm.errorSincronizacion.collectAsStateWithLifecycle()
+    LaunchedEffect(usuario?.correo) {
+        if (usuario != null) vm.actualizar()
+    }
 
     Scaffold(
         topBar = {
@@ -92,6 +98,9 @@ fun AlertasScreen(
                     actionIconContentColor = Color.White
                 ),
                 actions = {
+                    IconButton(onClick = vm::actualizar) {
+                        Icon(Icons.Default.Refresh, "Actualizar alertas")
+                    }
                     IconButton(onClick = { auth.cerrarSesion(); onSalir() }) {
                         Icon(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión")
                     }
@@ -101,6 +110,9 @@ fun AlertasScreen(
         floatingActionButton = { BotonAlarma(onNueva) }
     ) { relleno ->
         Column(Modifier.fillMaxSize().padding(relleno)) {
+            errorSincronizacion?.let {
+                Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error)
+            }
             val activas = alertas.count { it.estado == Estados.ACTIVA }
             TarjetaConBorde(
                 color = MaterialTheme.colorScheme.secondary,

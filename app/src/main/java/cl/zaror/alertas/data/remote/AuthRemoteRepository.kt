@@ -5,10 +5,12 @@ import okhttp3.Credentials
 import retrofit2.HttpException
 
 class AuthRemoteRepository(private val api: AuthApi = RetrofitInstance.authApi) {
-    suspend fun registrarVecino(correo: String, clave: String): PerfilRemoto =
-        api.registrar(RegistroRemotoRequest(correo, clave))
+    suspend fun registrarVecino(correo: String, clave: String,
+                               nombre: String? = null, telefono: String? = null,
+                               direccion: String? = null): PerfilRemoto =
+        api.registrar(RegistroRemotoRequest(correo, clave, nombre, telefono, direccion))
 
-    suspend fun autenticar(correo: String, clave: String, rolLocal: String): PerfilRemoto {
+    suspend fun autenticar(correo: String, clave: String, rolLocal: String?): PerfilRemoto {
         val autorizacion = Credentials.basic(correo, clave)
         return try {
             api.perfil(autorizacion)

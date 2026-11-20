@@ -1,5 +1,10 @@
 package cl.zaror.alertas.viewmodel
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.zaror.alertas.data.Alerta
@@ -17,6 +22,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import kotlin.math.roundToLong
 
 class AlertasViewModel(
@@ -31,6 +39,22 @@ class AlertasViewModel(
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
+
+    private val _errorSincronizacion = MutableStateFlow<String?>(null)
+    val errorSincronizacion = _errorSincronizacion.asStateFlow()
+
+    fun actualizar() {
+        viewModelScope.launch {
+            try {
+                repo.sincronizarAlertas(remoto.listarAlertas())
+                _errorSincronizacion.value = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _errorSincronizacion.value = "No se pudieron actualizar las alertas del servidor."
+            }
+        }
+    }
 
     fun alerta(id: Int): Flow<Alerta?> = repo.alerta(id)
 
@@ -104,15 +128,54 @@ class AlertasViewModel(
         }
     }
 
-    fun onFoto(uri: String?) {
-        _nueva.update { it.copy(fotoUri = uri) }
+    fun onFoto(contexto: Context, uri: Uri) {
+        _nueva.update { it.copy(fotoUri = uri.toString(), procesandoFoto = true, errorEnvio = null) }
+        viewModelScope.launch {
+            try {
+                val codificada = withContext(Dispatchers.IO) {
+                    val limites = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    contexto.contentResolver.openInputStream(uri).use { entrada ->
+                        BitmapFactory.decodeStream(entrada, null, limites)
+                    }
+                    val opciones = BitmapFactory.Options().apply {
+                        inSampleSize = maxOf(1, maxOf(limites.outWidth, limites.outHeight) / 1024)
+                    }
+                    contexto.contentResolver.openInputStream(uri).use { entrada ->
+                        val original = BitmapFactory.decodeStream(entrada, null, opciones)
+                            ?: error("No se pudo leer la fotografía")
+                        val escala = minOf(1f, 1024f / maxOf(original.width, original.height))
+                        val bitmap = if (escala < 1f) Bitmap.createScaledBitmap(
+                            original, (original.width * escala).toInt(),
+                            (original.height * escala).toInt(), true
+                        ) else original
+                        val salida = ByteArrayOutputStream()
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, salida)
+                        Base64.encodeToString(salida.toByteArray(), Base64.NO_WRAP)
+                    }
+                }
+                _nueva.update {
+                    if (it.fotoUri == uri.toString())
+                        it.copy(fotoBase64 = codificada, procesandoFoto = false)
+                    else it
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _nueva.update { it.copy(fotoUri = null, fotoBase64 = null,
+                    procesandoFoto = false, errorEnvio = "No se pudo preparar la fotografía") }
+            }
+        }
+    }
+
+    fun quitarFoto() {
+        _nueva.update { it.copy(fotoUri = null, fotoBase64 = null, procesandoFoto = false) }
     }
 
     private var copiaPendiente: Alerta? = null
 
     fun activar(autor: String) {
         val formulario = _nueva.value
-        if (formulario.enviando || formulario.guardada || formulario.consultandoDireccion) return
+        if (formulario.enviando || formulario.guardada || formulario.consultandoDireccion || formulario.procesandoFoto) return
         copiaPendiente?.let { copia ->
             _nueva.update { it.copy(enviando = true) }
             viewModelScope.launch { guardarCopia(copia) }
@@ -155,7 +218,8 @@ class AlertasViewModel(
                         descripcion = formulario.descripcion.valor.trim(),
                         tipo = formulario.tipo,
                         ubicacion = ubicacion,
-                        estado = "Activa"
+                        estado = "Activa",
+                        fotoBase64 = formulario.fotoBase64
                     )
                 )
 
@@ -169,7 +233,8 @@ class AlertasViewModel(
                         fotoUri = formulario.fotoUri,
                         autor = autor,
                         fecha = System.currentTimeMillis(),
-                        estado = respuesta.estado
+                        estado = respuesta.estado,
+                        fotoBase64 = respuesta.fotoBase64
                     )
                 )
 
@@ -221,6 +286,7 @@ class AlertasViewModel(
                     val respuesta = remoto.actualizarAlerta(id,
                         NuevaAlertaRequest(a.titulo, a.descripcion, a.tipo, a.ubicacion, estado))
                     repo.actualizarRemota(id, respuesta.estado)
+            actualizar()
                 }
             } catch (e: CancellationException) {
                 throw e

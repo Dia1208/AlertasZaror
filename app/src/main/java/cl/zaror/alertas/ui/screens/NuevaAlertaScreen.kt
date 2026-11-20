@@ -83,7 +83,7 @@ fun NuevaAlertaScreen(
 
     val lanzarCamara =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-            if (ok) vm.onFoto(uriTemporal?.toString())
+            if (ok) uriTemporal?.let { vm.onFoto(contexto, it) }
         }
 
     val pedirCamara =
@@ -235,7 +235,7 @@ fun NuevaAlertaScreen(
                             .height(180.dp)
                             .clip(RoundedCornerShape(12.dp))
                     )
-                    TextButton(onClick = { vm.onFoto(null) }) {
+                    TextButton(onClick = vm::quitarFoto) {
                         Text("Quitar foto")
                     }
                 }
@@ -250,7 +250,7 @@ fun NuevaAlertaScreen(
 
             Button(
                 onClick = { vm.activar(usuario?.nombre ?: "Vecino/a") },
-                enabled = !estado.enviando && !estado.consultandoDireccion,
+                enabled = !estado.enviando && !estado.consultandoDireccion && !estado.procesandoFoto,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -262,6 +262,7 @@ fun NuevaAlertaScreen(
                     when {
                         estado.enviando -> "Enviando alerta…"
                         estado.consultandoDireccion -> "Buscando dirección…"
+                        estado.procesandoFoto -> "Preparando fotografía…"
                         else -> "Enviar alerta"
                     }
                 )

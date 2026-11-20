@@ -20,6 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,8 @@ fun AvisosScreen(gestion: GestionViewModel, auth: AuthViewModel) {
     val avisos by gestion.comunicados.collectAsStateWithLifecycle()
     val form by gestion.aviso.collectAsStateWithLifecycle()
     val usuario by auth.usuario.collectAsStateWithLifecycle()
+    val error by gestion.error.collectAsStateWithLifecycle()
+    LaunchedEffect(usuario?.correo) { if (usuario != null) gestion.actualizarComunicados() }
     val esDirectiva = usuario?.rol == Roles.DIRECTIVA
     var formVisible by remember { mutableStateOf(false) }
 
@@ -50,6 +53,8 @@ fun AvisosScreen(gestion: GestionViewModel, auth: AuthViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { Text("Comunicados de la directiva", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        item { Button(onClick = gestion::actualizarComunicados) { Text("Actualizar comunicados") } }
+        error?.let { mensaje -> item { Text(mensaje, color = MaterialTheme.colorScheme.error) } }
 
         if (esDirectiva) {
             item {

@@ -32,6 +32,8 @@ data class NuevaAlertaState(
     val latitud: Double? = null,
     val longitud: Double? = null,
     val fotoUri: String? = null,
+    val fotoBase64: String? = null,
+    val procesandoFoto: Boolean = false,
     val mensajeUbicacion: String? = null,
     val direccionAproximada: String? = null,
     val consultandoDireccion: Boolean = false,

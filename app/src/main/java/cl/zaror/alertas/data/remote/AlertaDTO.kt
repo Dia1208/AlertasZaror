@@ -7,5 +7,8 @@ data class AlertaDTO(
     val descripcion: String,
     val tipo: String,
     val ubicacion: String,
-    val estado: String
+    val estado: String,
+    val autor: String? = null,
+    val fecha: Long? = null,
+    val fotoBase64: String? = null
 )

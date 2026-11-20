@@ -4,10 +4,10 @@ Aplicación Android para apoyar la comunicación de emergencias de una comunidad
 
 ## Funcionalidades
 
-- Registro local y en el servidor, e inicio de sesión verificado con el microservicio. Los roles son Vecino/a, Encargado/a y Directiva.
+- Registro de Vecino/a en el servidor e inicio de sesión verificado con el microservicio, incluso desde un dispositivo nuevo. Los roles son Vecino/a, Encargado/a y Directiva.
 - Creación de alertas con tipo, descripción, ubicación aproximada y fotografía opcional.
-- Consulta de alertas remotas y operaciones de actualización y eliminación desde la pantalla de alertas.
-- Envío de nuevas alertas al microservicio Spring Boot; la app también conserva una copia local en Room.
+- Alertas, fallas y comunicados compartidos mediante el microservicio. Las pantallas tienen un botón para actualizar los datos desde otro dispositivo.
+- Envío de alertas y fotografías comprimidas al microservicio; la app conserva copias locales en Room.
 - Registro de ubicación aproximada mediante GPS y búsqueda inversa de dirección en OpenStreetMap Nominatim. Si la consulta falla, la app usa coordenadas aproximadas.
 - Formularios validados, permisos de ubicación/cámara y pruebas unitarias y de interfaz.
 
@@ -18,13 +18,13 @@ Los datos utilizados con fines académicos deben ser ficticios. Las dos cuentas 
 | Encargado/a | `alejandro@encargado.cl` | `Duoc.2026@` |
 | Directiva | `alejandro@directiva.cl` | `Duoc.2026@` |
 
-Room guarda las cuentas y alertas locales de cada dispositivo. El microservicio guarda sus propias cuentas y alertas en MySQL y verifica los permisos para actualizar o eliminar alertas. Los registros nuevos reciben siempre el rol Vecino/a.
+Room conserva una copia local de los datos consultados. MySQL en el microservicio es la fuente compartida: las nuevas alertas, fallas y comunicados se envían allí antes de guardarse en Room. Los registros nuevos reciben siempre el rol Vecino/a. Encargado/a puede reportar y resolver fallas; Directiva puede publicar comunicados. Ambos pueden gestionar alertas. Los registros locales anteriores a esta versión que no tienen identificador remoto permanecen solo en el dispositivo.
 
 ## Requisitos
 
 - Android Studio y JDK 17.
 - Emulador o dispositivo Android con API 26 o superior.
-- Para iniciar sesión y sincronizar alertas: el [microservicio](https://github.com/Dia1208/microservicioalertas) debe estar funcionando en EC2.
+- Para iniciar sesión y sincronizar los datos: el [microservicio](https://github.com/Dia1208/microservicioalertas) actualizado debe estar funcionando en EC2.
 - Conexión a internet para dependencias Gradle y la geocodificación Nominatim.
 
 ## Ejecutar la app
@@ -34,6 +34,7 @@ Room guarda las cuentas y alertas locales de cada dispositivo. El microservicio 
 3. Comprueba que el microservicio responda en `https://52-90-150-61.sslip.io/`.
 4. Ejecuta la configuración `app` desde Android Studio.
 5. Para probar GPS en un emulador: **Extended controls → Location**, define una ubicación y vuelve al formulario de alerta.
+6. En otro dispositivo, inicia sesión y pulsa **Actualizar alertas**, **Actualizar fallas** o **Actualizar comunicados** para recibir los cambios. La actualización es manual al pulsar el botón y también se intenta al entrar en cada pantalla; no hay notificaciones en tiempo real.
 
 Retrofit usa `https://52-90-150-61.sslip.io/`, por lo que un teléfono puede usar la app desde otra red mientras la instancia EC2 siga funcionando. Si cambia la IP pública de EC2, hay que actualizar el dominio/certificado y generar una APK nueva. Las credenciales de MySQL y el archivo de firma de la APK no se incluyen en Git.
 
