@@ -116,12 +116,13 @@ class AuthViewModelTest : StringSpec({
             try {
                 val repo = mockk<Repositorio>()
                 val remoto = mockk<AuthRemoteRepository>()
-                val nuevo = Usuario(nombre = "ana", correo = "ana@correo.cl", telefono = "",
-                    direccion = "", claveHash = "hash", rol = Roles.VECINO)
-                coEvery { repo.usuarioPorCorreo("ana@correo.cl") } returnsMany listOf(null, nuevo)
-                coEvery { repo.registrar(any()) } returns true
+                val guardado = slot<Usuario>()
+                coEvery { repo.usuarioPorCorreo("ana@correo.cl") } answers {
+                    if (guardado.isCaptured) guardado.captured else null
+                }
+                coEvery { repo.registrar(capture(guardado)) } returns true
                 coEvery { remoto.autenticar("ana@correo.cl", any(), null) } returns
-                    PerfilRemoto("ana@correo.cl", "VECINO")
+                    PerfilRemoto("ana@correo.cl", "VECINO", "Ana Vecina", "912345678", "Pasaje Norte")
                 val vm = AuthViewModel(repo, remoto)
                 vm.onLoginCorreo("ana@correo.cl")
                 vm.onLoginClave("Zaror2026")
@@ -129,6 +130,8 @@ class AuthViewModelTest : StringSpec({
                 advanceUntilIdle()
                 vm.usuario.value?.correo shouldBe "ana@correo.cl"
                 vm.usuario.value?.rol shouldBe Roles.VECINO
+                vm.usuario.value?.nombre shouldBe "Ana Vecina"
+                vm.usuario.value?.direccion shouldBe "Pasaje Norte"
                 vm.cerrarSesion()
             } finally {
                 Dispatchers.resetMain()
