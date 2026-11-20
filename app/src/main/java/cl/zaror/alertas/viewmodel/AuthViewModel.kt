@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.zaror.alertas.data.Repositorio
 import cl.zaror.alertas.data.Usuario
+import cl.zaror.alertas.data.remote.ApiSession
+import cl.zaror.alertas.data.remote.AuthRemoteRepository
 import cl.zaror.alertas.domain.Roles
 import cl.zaror.alertas.domain.Validaciones
 import cl.zaror.alertas.domain.sha256
@@ -11,9 +13,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-class AuthViewModel(private val repo: Repositorio) : ViewModel() {
+class AuthViewModel(
+    private val repo: Repositorio,
+    private val remoto: AuthRemoteRepository = AuthRemoteRepository()
+) : ViewModel() {
 
     private val _login = MutableStateFlow(LoginState())
     val login: StateFlow<LoginState> = _login.asStateFlow()
@@ -65,13 +71,36 @@ class AuthViewModel(private val repo: Repositorio) : ViewModel() {
                     )
                 }
             } else {
-                _usuario.value = usuario
-                _login.value = LoginState()
+                try {
+                    val perfil = remoto.autenticar(
+                        usuario.correo, s.clave.valor, usuario.rol
+                    )
+                    val rolServidor = when (perfil.rol) {
+                        "VECINO" -> Roles.VECINO
+                        "ENCARGADO" -> Roles.ENCARGADO
+                        "DIRECTIVA" -> Roles.DIRECTIVA
+                        else -> null
+                    }
+                    if (rolServidor != usuario.rol) {
+                        _login.update { it.copy(cargando = false, mensaje = "El rol no coincide con el servidor") }
+                    } else {
+                        ApiSession.establecer(usuario.correo, s.clave.valor)
+                        _usuario.value = usuario
+                        _login.value = LoginState()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    _login.update {
+                        it.copy(cargando = false, mensaje = "No se pudo verificar la cuenta con el servidor")
+                    }
+                }
             }
         }
     }
 
     fun cerrarSesion() {
+        ApiSession.limpiar()
         _usuario.value = null
     }
 
@@ -136,26 +165,32 @@ class AuthViewModel(private val repo: Repositorio) : ViewModel() {
 
         viewModelScope.launch {
             _registro.update { it.copy(cargando = true) }
-
-            val correcto = repo.registrar(
-                Usuario(
-                    nombre = s.nombre.valor.trim(),
-                    correo = s.correo.valor.trim().lowercase(),
-                    telefono = s.telefono.valor,
-                    direccion = s.direccion.valor.trim(),
-                    claveHash = sha256(s.clave.valor),
-                    rol = Roles.VECINO
-                )
-            )
-
-            _registro.update {
-                if (correcto) {
-                    it.copy(cargando = false, exito = true)
-                } else {
-                    it.copy(
-                        cargando = false,
-                        mensaje = "Ese correo ya está registrado"
+            try {
+                val correo = s.correo.valor.trim().lowercase()
+                if (repo.correoRegistrado(correo)) {
+                    _registro.update { it.copy(cargando = false, mensaje = "Ese correo ya está registrado") }
+                    return@launch
+                }
+                remoto.registrarVecino(correo, s.clave.valor)
+                val correcto = repo.registrar(
+                    Usuario(
+                        nombre = s.nombre.valor.trim(),
+                        correo = correo,
+                        telefono = s.telefono.valor,
+                        direccion = s.direccion.valor.trim(),
+                        claveHash = sha256(s.clave.valor),
+                        rol = Roles.VECINO
                     )
+                )
+                _registro.update {
+                    if (correcto) it.copy(cargando = false, exito = true)
+                    else it.copy(cargando = false, mensaje = "Ese correo ya está registrado")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _registro.update {
+                    it.copy(cargando = false, mensaje = "No se pudo registrar en el servidor")
                 }
             }
         }

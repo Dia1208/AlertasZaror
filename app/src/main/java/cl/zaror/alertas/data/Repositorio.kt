@@ -22,6 +22,9 @@ class Repositorio(db: AppDatabase) {
     suspend fun registrar(usuario: Usuario): Boolean =
         try { usuarioDao.insertar(usuario); true } catch (e: SQLiteConstraintException) { false }
 
+    suspend fun correoRegistrado(correo: String): Boolean =
+        usuarioDao.buscarPorCorreo(correo) != null
+
     suspend fun iniciarSesion(correo: String, claveHash: String): Usuario? =
         usuarioDao.buscarPorCorreo(correo)?.takeIf { it.claveHash == claveHash }
 

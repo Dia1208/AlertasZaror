@@ -32,14 +32,15 @@ import cl.zaror.alertas.viewmodel.AlertaRemoteViewModel
 
 @Composable
 fun AlertaRemoteScreen(
-    vm: AlertaRemoteViewModel = viewModel()
+    vm: AlertaRemoteViewModel = viewModel(),
+    puedeGestionar: Boolean = false
 ) {
     val alertas by vm.alertas.collectAsState()
     val error by vm.error.collectAsState()
     val procesando by vm.procesando.collectAsState()
     var alertaParaEliminar by remember { mutableStateOf<AlertaDTO?>(null) }
 
-    alertaParaEliminar?.let { alerta ->
+    alertaParaEliminar?.takeIf { puedeGestionar }?.let { alerta ->
         AlertDialog(
             onDismissRequest = { alertaParaEliminar = null },
             title = { Text("Eliminar alerta") },
@@ -112,6 +113,7 @@ fun AlertaRemoteScreen(
                 TarjetaAlertaRemota(
                     alerta = alerta,
                     habilitado = !procesando,
+                    puedeGestionar = puedeGestionar,
                     onCambiarEstado = { vm.cambiarEstado(alerta) },
                     onEliminar = { alertaParaEliminar = alerta }
                 )
@@ -124,6 +126,7 @@ fun AlertaRemoteScreen(
 private fun TarjetaAlertaRemota(
     alerta: AlertaDTO,
     habilitado: Boolean,
+    puedeGestionar: Boolean,
     onCambiarEstado: () -> Unit,
     onEliminar: () -> Unit
 ) {
@@ -138,7 +141,7 @@ private fun TarjetaAlertaRemota(
             Text("Ubicación: " + alerta.ubicacion)
             Text("Estado: " + alerta.estado)
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (puedeGestionar) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = onCambiarEstado,
                     enabled = habilitado

@@ -2,6 +2,8 @@ package cl.zaror.alertas.viewmodel
 
 import cl.zaror.alertas.data.Repositorio
 import cl.zaror.alertas.data.Usuario
+import cl.zaror.alertas.data.remote.AuthRemoteRepository
+import cl.zaror.alertas.data.remote.PerfilRemoto
 import cl.zaror.alertas.domain.Roles
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -25,13 +27,17 @@ class AuthViewModelTest : StringSpec({
 
             try {
                 val repositorio = mockk<Repositorio>()
+                val remoto = mockk<AuthRemoteRepository>()
                 val usuarioRegistrado = slot<Usuario>()
+
+                coEvery { repositorio.correoRegistrado(any()) } returns false
+                coEvery { remoto.registrarVecino(any(), any()) } returns PerfilRemoto("ana@correo.cl", "VECINO")
 
                 coEvery {
                     repositorio.registrar(capture(usuarioRegistrado))
                 } returns true
 
-                val vm = AuthViewModel(repositorio)
+                val vm = AuthViewModel(repositorio, remoto)
 
                 vm.onNombre("Ana Vecina")
                 vm.onCorreo("ana@correo.cl")
@@ -58,10 +64,12 @@ class AuthViewModelTest : StringSpec({
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val repo = mockk<Repositorio>()
+                val remoto = mockk<AuthRemoteRepository>()
                 val usuario = Usuario(nombre = "Ana", correo = "ana@correo.cl", telefono = "912345678",
                     direccion = "Pasaje Norte", claveHash = "hash", rol = Roles.VECINO)
                 coEvery { repo.iniciarSesion("ana@correo.cl", any()) } returns usuario
-                val vm = AuthViewModel(repo)
+                coEvery { remoto.autenticar(any(), any(), any()) } returns PerfilRemoto("ana@correo.cl", "VECINO")
+                val vm = AuthViewModel(repo, remoto)
                 vm.onLoginCorreo(" ANA@CORREO.CL ")
                 vm.onLoginClave("Zaror2026")
                 vm.iniciarSesion()
@@ -81,8 +89,9 @@ class AuthViewModelTest : StringSpec({
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val repo = mockk<Repositorio>()
+                val remoto = mockk<AuthRemoteRepository>()
                 coEvery { repo.iniciarSesion(any(), any()) } returns null
-                val vm = AuthViewModel(repo)
+                val vm = AuthViewModel(repo, remoto)
                 vm.iniciarSesion()
                 vm.login.value.correo.error shouldBe "El correo es obligatorio"
                 vm.onLoginCorreo("ana@correo.cl")
@@ -102,8 +111,10 @@ class AuthViewModelTest : StringSpec({
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val repo = mockk<Repositorio>()
+                val remoto = mockk<AuthRemoteRepository>()
+                coEvery { repo.correoRegistrado(any()) } returns true
                 coEvery { repo.registrar(any()) } returns false
-                val vm = AuthViewModel(repo)
+                val vm = AuthViewModel(repo, remoto)
                 vm.registrar()
                 vm.registro.value.nombre.error shouldBe "El nombre es obligatorio"
                 vm.onNombre("Ana Vecina")

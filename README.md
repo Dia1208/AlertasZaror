@@ -4,31 +4,38 @@ Aplicación Android para apoyar la comunicación de emergencias de una comunidad
 
 ## Funcionalidades
 
-- Registro e inicio de sesión local, con perfiles Vecino/a, Encargado/a y Directiva.
+- Registro local y en el servidor, e inicio de sesión verificado con el microservicio. Los roles son Vecino/a, Encargado/a y Directiva.
 - Creación de alertas con tipo, descripción, ubicación aproximada y fotografía opcional.
 - Consulta de alertas remotas y operaciones de actualización y eliminación desde la pantalla de alertas.
 - Envío de nuevas alertas al microservicio Spring Boot; la app también conserva una copia local en Room.
 - Registro de ubicación aproximada mediante GPS y búsqueda inversa de dirección en OpenStreetMap Nominatim. Si la consulta falla, la app usa coordenadas aproximadas.
 - Formularios validados, permisos de ubicación/cámara y pruebas unitarias y de interfaz.
 
-Los datos utilizados con fines académicos deben ser ficticios. El inicio de sesión se almacena localmente y no reemplaza un sistema de autenticación de producción.
+Los datos utilizados con fines académicos deben ser ficticios. Las dos cuentas de demostración usan una contraseña pública y no deben utilizarse con datos reales.
+
+| Rol | Correo | Contraseña |
+| --- | --- | --- |
+| Encargado/a | `alejandro@encargado.cl` | `Duoc.2026@` |
+| Directiva | `alejandro@directiva.cl` | `Duoc.2026@` |
+
+Room guarda las cuentas y alertas locales de cada dispositivo. El microservicio guarda sus propias cuentas y alertas en MySQL y verifica los permisos para actualizar o eliminar alertas. Los registros nuevos reciben siempre el rol Vecino/a.
 
 ## Requisitos
 
 - Android Studio y JDK 17.
 - Emulador o dispositivo Android con API 26 o superior.
-- Para crear y sincronizar alertas remotas: MySQL y el repositorio `microservicioalertas` ejecutándose en el computador.
+- Para iniciar sesión y sincronizar alertas: el [microservicio](https://github.com/Dia1208/microservicioalertas) debe estar funcionando en EC2.
 - Conexión a internet para dependencias Gradle y la geocodificación Nominatim.
 
 ## Ejecutar la app
 
 1. Clona este repositorio y abre su carpeta en Android Studio.
 2. Espera a que termine la sincronización de Gradle y selecciona un emulador o dispositivo.
-3. Inicia primero el microservicio siguiendo su README. El servicio debe escuchar en el puerto `8081`.
+3. Comprueba que el microservicio responda en `https://52-90-150-61.sslip.io/`.
 4. Ejecuta la configuración `app` desde Android Studio.
 5. Para probar GPS en un emulador: **Extended controls → Location**, define una ubicación y vuelve al formulario de alerta.
 
-La configuración de Retrofit usa `http://10.0.2.2:8081/`, la dirección del computador vista desde el emulador Android estándar. En un teléfono físico, configura la dirección IP local del computador y asegúrate de que ambos estén en la misma red. No publiques el servicio en una red no confiable usando HTTP.
+Retrofit usa `https://52-90-150-61.sslip.io/`, por lo que un teléfono puede usar la app desde otra red mientras la instancia EC2 siga funcionando. Si cambia la IP pública de EC2, hay que actualizar el dominio/certificado y generar una APK nueva. Las credenciales de MySQL y el archivo de firma de la APK no se incluyen en Git.
 
 ## API externa de geocodificación
 

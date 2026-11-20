@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -233,9 +234,15 @@ fun AppNavegacion(
             // NUEVA PANTALLA: ALERTAS DESDE SPRING BOOT
             composable(Rutas.REMOTAS) {
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as cl.zaror.alertas.ZarorApp
-                AlertaRemoteScreen(vm = androidx.lifecycle.viewmodel.compose.viewModel(
-                    factory = cl.zaror.alertas.viewmodel.FabricaViewModel(app.repositorio)
-                ))
+                val usuario by auth.usuario.collectAsStateWithLifecycle()
+                val puedeGestionar = usuario?.rol == cl.zaror.alertas.domain.Roles.ENCARGADO ||
+                    usuario?.rol == cl.zaror.alertas.domain.Roles.DIRECTIVA
+                AlertaRemoteScreen(
+                    vm = androidx.lifecycle.viewmodel.compose.viewModel(
+                        factory = cl.zaror.alertas.viewmodel.FabricaViewModel(app.repositorio)
+                    ),
+                    puedeGestionar = puedeGestionar
+                )
             }
         }
     }
