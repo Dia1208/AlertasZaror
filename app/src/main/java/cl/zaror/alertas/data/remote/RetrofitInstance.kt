@@ -8,7 +8,7 @@ import okhttp3.OkHttpClient
 
 object RetrofitInstance {
 
-    private const val BASE_URL = "https://54-82-20-127.sslip.io/"
+    private const val BASE_URL = "https://52-4-125-119.sslip.io/"
 
     private val cliente = OkHttpClient.Builder().addInterceptor { cadena ->
         val solicitud = cadena.request().newBuilder()

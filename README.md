@@ -31,12 +31,12 @@ Room conserva una copia local de los datos consultados. MySQL en el microservici
 
 1. Clona este repositorio y abre su carpeta en Android Studio.
 2. Espera a que termine la sincronización de Gradle y selecciona un emulador o dispositivo.
-3. Comprueba que el microservicio responda en `https://54-82-20-127.sslip.io/`.
+3. Comprueba que el microservicio responda en `https://52-4-125-119.sslip.io/`.
 4. Ejecuta la configuración `app` desde Android Studio.
 5. Para probar GPS en un emulador: **Extended controls → Location**, define una ubicación y vuelve al formulario de alerta.
 6. En otro dispositivo, inicia sesión y pulsa **Actualizar alertas**, **Actualizar fallas** o **Actualizar comunicados** para recibir los cambios. La actualización es manual al pulsar el botón y también se intenta al entrar en cada pantalla; no hay notificaciones en tiempo real.
 
-Retrofit usa `https://54-82-20-127.sslip.io/`, por lo que un teléfono puede usar la app desde otra red mientras la instancia EC2 siga funcionando. Si cambia la IP pública de EC2, hay que actualizar el dominio/certificado y generar una APK nueva. Las credenciales de MySQL y el archivo de firma de la APK no se incluyen en Git.
+Retrofit usa `https://52-4-125-119.sslip.io/`, por lo que un teléfono puede usar la app desde otra red mientras la instancia EC2 siga funcionando. La instancia usa una dirección IP elástica para mantener estable el dominio al reiniciarse. Si se libera esa dirección, hay que actualizar el dominio/certificado y generar una APK nueva. Las credenciales de MySQL y el archivo de firma de la APK no se incluyen en Git.
 
 ## API externa de geocodificación
 
