@@ -112,3 +112,47 @@ dependencies {
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     useJUnitPlatform()
 }
+
+// La rúbrica mide la lógica de los ViewModels, no las pantallas Compose ni el código generado por Room.
+tasks.register("verifyViewModelCoverage") {
+    dependsOn("createDebugUnitTestCoverageReport")
+    doLast {
+        val report = layout.buildDirectory.file("reports/coverage/test/debug/report.xml").get().asFile
+        val document = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+        }.newDocumentBuilder().parse(report)
+        val targetFiles = setOf(
+            "AuthViewModel.kt", "GestionViewModel.kt",
+            "AlertaRemoteViewModel.kt", "AlertasViewModel.kt"
+        )
+        var covered = 0
+        var missed = 0
+        val found = mutableSetOf<String>()
+        val files = document.getElementsByTagName("sourcefile")
+        for (i in 0 until files.length) {
+            val file = files.item(i) as org.w3c.dom.Element
+            val name = file.getAttribute("name")
+            if (name !in targetFiles) continue
+            found += name
+            val counters = file.getElementsByTagName("counter")
+            for (j in 0 until counters.length) {
+                val counter = counters.item(j) as org.w3c.dom.Element
+                if (counter.getAttribute("type") == "LINE") {
+                    covered += counter.getAttribute("covered").toInt()
+                    missed += counter.getAttribute("missed").toInt()
+                    break
+                }
+            }
+        }
+        check(found == targetFiles) { "Faltan ViewModels en el informe: ${targetFiles - found}" }
+        val total = covered + missed
+        check(total > 0) { "El informe no contiene líneas de los ViewModels" }
+        val percentage = 100.0 * covered / total
+        logger.lifecycle("Cobertura de ViewModels: %.2f%% (%d/%d líneas)".format(percentage, covered, total))
+        check(covered * 100 >= total * 80) {
+            "La cobertura de ViewModels debe ser al menos 80%%; fue %.2f%%".format(percentage)
+        }
+    }
+}

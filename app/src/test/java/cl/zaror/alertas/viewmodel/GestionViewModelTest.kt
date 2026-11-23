@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GestionViewModelTest : StringSpec({
@@ -89,6 +90,65 @@ class GestionViewModelTest : StringSpec({
                 vm.aviso.value shouldBe AvisoForm()
                 termino shouldBe true
                 coVerify(exactly = 1) { repo.cambiarResuelta(7, true) }
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "actualiza fallas y comunicados y muestra un error cuando el servidor falla" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                val remoto = mockk<GestionRemoteRepository>()
+                every { repo.fallas } returns flowOf(emptyList())
+                every { repo.comunicados } returns flowOf(emptyList())
+                val fallas = listOf(FallaDTO(21L, "Agua", "Corte de agua", "Alta", "Ana", 1L, false))
+                val comunicados = listOf(ComunicadoDTO(31L, "Aviso", "Habrá reunión mañana", "Directiva", 2L))
+                coEvery { remoto.fallas() } returns fallas
+                coEvery { remoto.comunicados() } returns comunicados
+                coEvery { repo.sincronizarFallas(fallas) } returns Unit
+                coEvery { repo.sincronizarComunicados(comunicados) } returns Unit
+                val vm = GestionViewModel(repo, remoto)
+
+                vm.actualizarFallas()
+                vm.actualizarComunicados()
+                advanceUntilIdle()
+                vm.error.value shouldBe null
+                coVerify(exactly = 1) { repo.sincronizarFallas(fallas) }
+                coVerify(exactly = 1) { repo.sincronizarComunicados(comunicados) }
+
+                coEvery { remoto.fallas() } throws IOException("Sin conexión")
+                vm.actualizarFallas()
+                advanceUntilIdle()
+                vm.error.value shouldBe "No se pudieron actualizar las fallas."
+                coEvery { remoto.comunicados() } throws IOException("Sin conexión")
+                vm.actualizarComunicados()
+                advanceUntilIdle()
+                vm.error.value shouldBe "No se pudieron actualizar los comunicados."
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "no marca la falla local si el servidor rechaza el cambio" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                val remoto = mockk<GestionRemoteRepository>()
+                every { repo.fallas } returns flowOf(emptyList())
+                every { repo.comunicados } returns flowOf(emptyList())
+                coEvery { remoto.resolverFalla(13L, true) } throws IOException("Sin conexión")
+                val vm = GestionViewModel(repo, remoto)
+                vm.marcarResuelta(Falla(id = 7, componente = "Alumbrado",
+                    detalle = "Luminaria apagada", prioridad = "Alta", reportadoPor = "Ana",
+                    fecha = 1000L, idRemoto = 13L), true)
+                advanceUntilIdle()
+                vm.error.value shouldBe "No se pudo actualizar la falla."
+                coVerify(exactly = 0) { repo.cambiarResuelta(any(), any()) }
             } finally {
                 Dispatchers.resetMain()
             }

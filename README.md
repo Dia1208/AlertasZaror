@@ -2,6 +2,12 @@
 
 Aplicación Android para apoyar la comunicación de emergencias de una comunidad. Este proyecto académico integra una app Kotlin/Jetpack Compose, almacenamiento local con Room, un microservicio Spring Boot propio y una consulta externa de geocodificación.
 
+## Integrantes
+
+- Diego Alejandro Gonzalez Ballesteros
+- Emanuel Orellana Gaete
+- Stefani Francisca Verdugo Toledo
+
 ## Funcionalidades
 
 - Registro de Vecino/a en el servidor e inicio de sesión verificado con el microservicio, incluso desde un dispositivo nuevo. Los roles son Vecino/a, Encargado/a y Directiva.
@@ -42,6 +48,22 @@ Retrofit usa `https://52-4-125-119.sslip.io/`, por lo que un teléfono puede usa
 
 La app consulta el endpoint de geocodificación inversa de OpenStreetMap Nominatim para convertir las coordenadas elegidas en una referencia legible. La ubicación se redondea a tres decimales antes de consultarla y se etiqueta como aproximada. La interfaz acredita a OpenStreetMap. La geocodificación depende de disponibilidad de internet y de los datos cartográficos, por lo que puede devolver un lugar cercano y no una dirección exacta.
 
+## Endpoints utilizados
+
+Microservicio propio en `https://52-4-125-119.sslip.io/`:
+
+| Método | Ruta | Uso en la app |
+| --- | --- | --- |
+| POST | `/auth/register` | Registrar una cuenta Vecino/a |
+| GET | `/auth/me` | Verificar el inicio de sesión y obtener el rol |
+| GET, POST | `/alertas` | Consultar y enviar alertas |
+| GET, PUT | `/alertas/{id}` | Consultar y actualizar una alerta |
+| GET, POST | `/fallas` | Consultar y reportar fallas |
+| PUT | `/fallas/{id}/resuelta` | Resolver una falla |
+| GET, POST | `/comunicados` | Consultar y publicar comunicados |
+
+API externa: `GET https://nominatim.openstreetmap.org/reverse` convierte coordenadas aproximadas en una referencia legible dentro del formulario de alerta.
+
 ## Pruebas
 
 Desde PowerShell en la raíz del proyecto, o desde la terminal de Android Studio:
@@ -53,7 +75,17 @@ Desde PowerShell en la raíz del proyecto, o desde la terminal de Android Studio
 
 La primera tarea ejecuta pruebas locales de lógica, repositorios y ViewModels. La segunda requiere un emulador activo o un dispositivo conectado.
 
+Para generar el informe de cobertura y comprobar el mínimo de 80 % de líneas en las cuatro clases ViewModel:
+
+```powershell
+.\gradlew.bat :app:verifyViewModelCoverage
+```
+
+El informe completo queda en `app/build/reports/coverage/test/debug/index.html`. El porcentaje exigido por esta comprobación corresponde a `AuthViewModel`, `AlertasViewModel`, `AlertaRemoteViewModel` y `GestionViewModel`; el informe completo también muestra pantallas, datos e infraestructura por separado.
+
 ## APK firmado (release)
+
+El [APK firmado de la entrega](app/release/app-release.apk) corresponde a `cl.zaror.alertas`, versión 1.2 (`versionCode` 3). La firma se puede comprobar con `apksigner verify --verbose --print-certs app/release/app-release.apk`. La llave `.jks` se entrega por el canal privado de la evaluación junto con una captura de su ubicación y del resultado de generación; no se almacena en este repositorio público.
 
 1. En Android Studio, selecciona **Build → Generate Signed Bundle / APK → APK**.
 2. Crea o selecciona un archivo de claves `.jks`, ingresa su contraseña y alias, y selecciona la variante `release`.

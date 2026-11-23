@@ -167,4 +167,58 @@ class AlertasViewModelTest : StringSpec({
             }
         }
     }
+
+    "sincroniza las alertas del servidor y muestra fallos de actualización" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                every { repo.alertas } returns flowOf(emptyList())
+                val remoto = mockk<AlertaRemoteRepository>()
+                val datos = listOf(AlertaDTO(15L, "Robo", "Robo en el pasaje", "Robo", "Centro", "Activa"))
+                coEvery { remoto.listarAlertas() } returns datos
+                coEvery { repo.sincronizarAlertas(datos) } returns Unit
+                val vm = AlertasViewModel(repo, remoto, mockk<GeocodificacionRepository>())
+
+                vm.actualizar()
+                advanceUntilIdle()
+                vm.errorSincronizacion.value shouldBe null
+                coVerify(exactly = 1) { repo.sincronizarAlertas(datos) }
+
+                coEvery { remoto.listarAlertas() } throws IOException("Sin conexión")
+                vm.actualizar()
+                advanceUntilIdle()
+                vm.errorSincronizacion.value shouldBe "No se pudieron actualizar las alertas del servidor."
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
+
+    "guarda una alerta local y reinicia el formulario" {
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val repo = mockk<Repositorio>()
+                every { repo.alertas } returns flowOf(emptyList())
+                val remoto = mockk<AlertaRemoteRepository>()
+                coEvery { remoto.crearAlerta(any()) } returns
+                    AlertaDTO(42L, "Robo", "Robo en el pasaje", "Robo", "Centro", "Activa")
+                coEvery { repo.insertarAlerta(any()) } returns Unit
+                val vm = AlertasViewModel(repo, remoto, mockk<GeocodificacionRepository>())
+                vm.onTipo("Robo")
+                vm.onDescripcion("Robo en el pasaje")
+                vm.activar("Ana")
+                advanceUntilIdle()
+                vm.nueva.value.guardada shouldBe true
+                vm.nueva.value.errorEnvio shouldBe null
+                coVerify(exactly = 1) { repo.insertarAlerta(match { it.idRemoto == 42L && it.autor == "Ana" }) }
+                vm.reiniciar()
+                vm.nueva.value.tipo shouldBe ""
+                vm.nueva.value.guardada shouldBe false
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+    }
 })
